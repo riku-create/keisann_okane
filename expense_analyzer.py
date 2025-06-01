@@ -7,43 +7,62 @@ import matplotlib as mpl
 import tempfile
 import os
 import re
+import matplotlib.font_manager as fm
+import urllib.request
 
-# 日本語フォントの設定
-plt.rcParams['font.family'] = 'DejaVu Sans'
-mpl.rcParams['axes.unicode_minus'] = False
+# --- 日本語フォント設定（IPAexGothicを自動DL＆適用） ---
+def set_japanese_font():
+    font_url = "https://github.com/googlefonts/ipafont/raw/main/fonts/ttf/ipaexg.ttf"
+    font_path = os.path.join(tempfile.gettempdir(), "ipaexg.ttf")
+    if not os.path.exists(font_path):
+        try:
+            urllib.request.urlretrieve(font_url, font_path)
+        except Exception:
+            return  # ダウンロード失敗時は何もしない
+    plt.rcParams['font.family'] = fm.FontProperties(fname=font_path).get_name()
+    mpl.rcParams['axes.unicode_minus'] = False
+set_japanese_font()
 
-# ページ設定
+# --- ページ設定とカスタムCSS ---
 st.set_page_config(
     page_title="支出分析・削減提案システム",
     page_icon="💰",
     layout="wide"
 )
 
-# カスタムCSSの追加
 st.markdown("""
 <style>
-    .main-title {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1E88E5;
-        text-align: center;
-        padding: 1rem 0;
-        margin-bottom: 2rem;
-        border-bottom: 3px solid #1E88E5;
-    }
-    .sub-title {
-        font-size: 1.5rem;
-        color: #424242;
-        margin: 1rem 0;
-    }
-    .stButton>button {
-        width: 100%;
-        background-color: #1E88E5;
-        color: white;
-    }
-    .stButton>button:hover {
-        background-color: #1565C0;
-    }
+body, .stApp {
+    background-color: #FFFDE7 !important;
+}
+.main-title {
+    font-size: clamp(1.2rem, 6vw, 2.2rem);
+    font-weight: bold;
+    color: #1E88E5;
+    text-align: center;
+    padding: 0.5rem 0 0.5rem 0;
+    margin-bottom: 1.2rem;
+    border-bottom: 2px solid #1E88E5;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+}
+.sub-title {
+    font-size: 1.2rem;
+    color: #424242;
+    margin: 0.5rem 0 0.5rem 0;
+}
+.stButton>button {
+    width: 100%;
+    background-color: #1E88E5;
+    color: white;
+}
+.stButton>button:hover {
+    background-color: #1565C0;
+}
+.stMarkdown, .stTextInput, .stDataFrame, .stFileUploader, .stAlert {
+    background-color: #FFFDE7 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -131,93 +150,89 @@ def read_excel_with_auto_header(uploaded_file):
     return df
 
 def main():
-    # タイトルの表示を改善
+    # タイトル（スマホでも一行表示＆改行抑制）
     st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
 
-    # 変換手順の表示を改善
+    # PDF→Excel変換手順（リンクはタップで新規タブ遷移）
     st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
     st.markdown("""
-    <div style='background-color: #f0f2f6; padding: 1rem; border-radius: 5px;'>
-    1. スマホやパソコンで[Smallpdf](https://smallpdf.com/jp/pdf-to-excel)や[Adobe Acrobat](https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html)などの無料Webサービスを開きます。<br>
+    <div style='background-color: #f0f2f6; padding: 0.7rem; border-radius: 5px; font-size: 1rem;'>
+    1. スマホやパソコンで<a href="https://smallpdf.com/jp/pdf-to-excel" target="_blank">Smallpdf</a>や<a href="https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html" target="_blank">Adobe Acrobat</a>などの無料Webサービスを開きます。<br>
     2. 変換したいPDFファイルをアップロードします。<br>
     3. 変換ボタンを押してExcel（.xlsx）ファイルをダウンロードします。<br>
     4. 下の「Excelファイルをアップロード」から変換したExcelファイルを選択してください。
     </div>
     """, unsafe_allow_html=True)
 
-    # ファイルアップローダーのスタイル改善
-    st.markdown('<div style="margin: 2rem 0;">', unsafe_allow_html=True)
+    st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
     st.markdown('</div>', unsafe_allow_html=True)
 
     if uploaded_file:
         try:
-            # 自動ヘッダー検出を使用してExcelを読み込み
             df = read_excel_with_auto_header(uploaded_file)
             st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
-            
-            # 列名の表示（デバッグ用）
             st.write("検出された列名:", df.columns.tolist())
-            
             st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
-            
+
             # 日付・金額の列名推定（改善版）
             date_col, amount_col = find_date_and_amount_columns(df)
-            
             if date_col and amount_col:
                 df = df[[date_col, amount_col]].dropna()
                 df.columns = ['日付', '金額']
-                
-                # 日付の変換を試みる（複数の形式に対応）
                 try:
                     df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
                 except:
-                    # 日付形式が特殊な場合の処理
                     df['日付'] = pd.to_datetime(df['日付'].astype(str).str.replace('年', '-').str.replace('月', '-').str.replace('日', ''), errors='coerce')
-                
-                # 金額の変換を試みる（複数の形式に対応）
                 try:
                     df['金額'] = pd.to_numeric(df['金額'].astype(str).str.replace('¥', '').str.replace('￥', '').str.replace(',', '').str.replace('円', ''), errors='coerce')
                 except:
                     df['金額'] = pd.to_numeric(df['金額'], errors='coerce')
-                
                 df = df.dropna()
-                
                 if len(df) == 0:
                     st.error("有効なデータが見つかりませんでした。データの形式を確認してください。")
                     return
-                
+                # --- グラフを一画面に表示（余白最小化） ---
+                st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
                 # 月次支出の推移
-                st.subheader("月次支出の推移")
+                st.subheader("月次支出の推移", divider="rainbow")
+                fig1, ax1 = plt.subplots(figsize=(6, 2.5))
                 monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
-                fig, ax = plt.subplots(figsize=(10, 6))
-                monthly.plot(kind='bar', ax=ax)
-                plt.title('月次支出の推移')
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
-                
+                monthly.plot(kind='bar', ax=ax1, color="#1976D2")
+                ax1.set_title('月次支出の推移', fontsize=13)
+                ax1.set_xlabel('')
+                ax1.set_ylabel('金額')
+                plt.xticks(rotation=45, fontsize=9)
+                plt.yticks(fontsize=9)
+                st.pyplot(fig1, use_container_width=True)
                 # 日次支出の分布
-                st.subheader("日次支出の分布")
-                fig, ax = plt.subplots(figsize=(10, 6))
-                sns.histplot(df['金額'], bins=30, ax=ax)
-                plt.title('日次支出の分布')
-                st.pyplot(fig)
-                
+                st.subheader("日次支出の分布", divider="rainbow")
+                fig2, ax2 = plt.subplots(figsize=(6, 2.5))
+                sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
+                ax2.set_title('日次支出の分布', fontsize=13)
+                ax2.set_xlabel('金額')
+                ax2.set_ylabel('件数')
+                plt.xticks(fontsize=9)
+                plt.yticks(fontsize=9)
+                st.pyplot(fig2, use_container_width=True)
                 # 曜日別の平均支出
-                st.subheader("曜日別の平均支出")
+                st.subheader("曜日別の平均支出", divider="rainbow")
+                fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                 df['曜日'] = df['日付'].dt.day_name()
                 weekday = df.groupby('曜日')['金額'].mean().reindex(
                     ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
-                fig, ax = plt.subplots(figsize=(10, 6))
-                weekday.plot(kind='bar', ax=ax)
-                plt.title('曜日別の平均支出')
-                st.pyplot(fig)
-                
-                # 基本統計量
-                st.subheader("支出の基本統計量")
-                st.dataframe(df['金額'].describe().to_frame())
-                
-                # 対話形式の質問
+                weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
+                ax3.set_title('曜日別の平均支出', fontsize=13)
+                ax3.set_xlabel('')
+                ax3.set_ylabel('平均金額')
+                plt.xticks(fontsize=9)
+                plt.yticks(fontsize=9)
+                st.pyplot(fig3, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                # --- 基本統計量 ---
+                st.subheader("支出の基本統計量", divider="rainbow")
+                st.dataframe(df['金額'].describe().to_frame(), use_container_width=True)
+                # --- 対話形式の質問 ---
                 st.header("あなたの支出管理について教えてください")
                 with st.form("user_input_form"):
                     high_expense_days = df.groupby('日付')['金額'].sum()
@@ -235,7 +250,6 @@ def main():
                     saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
                     lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
                     submitted = st.form_submit_button("提案を表示")
-                
                 if submitted:
                     st.header("あなたへの具体的な提案")
                     st.markdown("### 回答まとめ")
