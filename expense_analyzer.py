@@ -196,40 +196,58 @@ def main():
                     return
                 # --- グラフを一画面に表示（余白最小化） ---
                 st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
-                # 月次支出の推移
-                st.subheader("月次支出の推移")
-                fig1, ax1 = plt.subplots(figsize=(6, 2.5))
-                monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
-                monthly.plot(kind='bar', ax=ax1, color="#1976D2")
-                ax1.set_title('月次支出の推移', fontsize=13)
-                ax1.set_xlabel('')
-                ax1.set_ylabel('金額')
-                plt.xticks(rotation=45, fontsize=9)
-                plt.yticks(fontsize=9)
-                st.pyplot(fig1, use_container_width=True)
-                # 日次支出の分布
-                st.subheader("日次支出の分布")
-                fig2, ax2 = plt.subplots(figsize=(6, 2.5))
-                sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
-                ax2.set_title('日次支出の分布', fontsize=13)
-                ax2.set_xlabel('金額')
-                ax2.set_ylabel('件数')
-                plt.xticks(fontsize=9)
-                plt.yticks(fontsize=9)
-                st.pyplot(fig2, use_container_width=True)
-                # 曜日別の平均支出
-                st.subheader("曜日別の平均支出")
-                fig3, ax3 = plt.subplots(figsize=(6, 2.5))
-                df['曜日'] = df['日付'].dt.day_name()
-                weekday = df.groupby('曜日')['金額'].mean().reindex(
-                    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
-                weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
-                ax3.set_title('曜日別の平均支出', fontsize=13)
-                ax3.set_xlabel('')
-                ax3.set_ylabel('平均金額')
-                plt.xticks(fontsize=9)
-                plt.yticks(fontsize=9)
-                st.pyplot(fig3, use_container_width=True)
+                try:
+                    # 月次支出の推移
+                    st.subheader("月次支出の推移")
+                    set_japanese_font()
+                    fig1, ax1 = plt.subplots(figsize=(6, 2.5))
+                    monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
+                    monthly.plot(kind='bar', ax=ax1, color="#1976D2")
+                    ax1.set_title('月次支出の推移', fontsize=13)
+                    ax1.set_xlabel('')
+                    ax1.set_ylabel('金額')
+                    plt.xticks(rotation=45, fontsize=9)
+                    plt.yticks(fontsize=9)
+                    plt.tight_layout()
+                    st.pyplot(fig1, use_container_width=True)
+                    plt.close(fig1)
+                except Exception as e:
+                    st.error(f"月次支出の推移グラフの描画でエラー: {e}")
+                try:
+                    # 日次支出の分布
+                    st.subheader("日次支出の分布")
+                    set_japanese_font()
+                    fig2, ax2 = plt.subplots(figsize=(6, 2.5))
+                    sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
+                    ax2.set_title('日次支出の分布', fontsize=13)
+                    ax2.set_xlabel('金額')
+                    ax2.set_ylabel('件数')
+                    plt.xticks(fontsize=9)
+                    plt.yticks(fontsize=9)
+                    plt.tight_layout()
+                    st.pyplot(fig2, use_container_width=True)
+                    plt.close(fig2)
+                except Exception as e:
+                    st.error(f"日次支出の分布グラフの描画でエラー: {e}")
+                try:
+                    # 曜日別の平均支出
+                    st.subheader("曜日別の平均支出")
+                    set_japanese_font()
+                    fig3, ax3 = plt.subplots(figsize=(6, 2.5))
+                    df['曜日'] = df['日付'].dt.day_name()
+                    weekday = df.groupby('曜日')['金額'].mean().reindex(
+                        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                    weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
+                    ax3.set_title('曜日別の平均支出', fontsize=13)
+                    ax3.set_xlabel('')
+                    ax3.set_ylabel('平均金額')
+                    plt.xticks(fontsize=9)
+                    plt.yticks(fontsize=9)
+                    plt.tight_layout()
+                    st.pyplot(fig3, use_container_width=True)
+                    plt.close(fig3)
+                except Exception as e:
+                    st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
                 st.markdown('</div>', unsafe_allow_html=True)
                 # --- 基本統計量 ---
                 st.subheader("支出の基本統計量")
