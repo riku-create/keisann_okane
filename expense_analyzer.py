@@ -172,7 +172,9 @@ def main():
         try:
             df = read_excel_with_auto_header(uploaded_file)
             st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
-            st.write("検出された列名:", df.columns.tolist())
+            # 検出された列名だけ折りたたみ表示
+            with st.expander("検出された列名", expanded=False):
+                st.write(df.columns.tolist())
             st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
 
             # 日付・金額の列名推定（改善版）
@@ -195,7 +197,7 @@ def main():
                 # --- グラフを一画面に表示（余白最小化） ---
                 st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
                 # 月次支出の推移
-                st.subheader("月次支出の推移", divider="rainbow")
+                st.subheader("月次支出の推移")
                 fig1, ax1 = plt.subplots(figsize=(6, 2.5))
                 monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
                 monthly.plot(kind='bar', ax=ax1, color="#1976D2")
@@ -206,7 +208,7 @@ def main():
                 plt.yticks(fontsize=9)
                 st.pyplot(fig1, use_container_width=True)
                 # 日次支出の分布
-                st.subheader("日次支出の分布", divider="rainbow")
+                st.subheader("日次支出の分布")
                 fig2, ax2 = plt.subplots(figsize=(6, 2.5))
                 sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
                 ax2.set_title('日次支出の分布', fontsize=13)
@@ -216,7 +218,7 @@ def main():
                 plt.yticks(fontsize=9)
                 st.pyplot(fig2, use_container_width=True)
                 # 曜日別の平均支出
-                st.subheader("曜日別の平均支出", divider="rainbow")
+                st.subheader("曜日別の平均支出")
                 fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                 df['曜日'] = df['日付'].dt.day_name()
                 weekday = df.groupby('曜日')['金額'].mean().reindex(
@@ -230,7 +232,7 @@ def main():
                 st.pyplot(fig3, use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
                 # --- 基本統計量 ---
-                st.subheader("支出の基本統計量", divider="rainbow")
+                st.subheader("支出の基本統計量")
                 st.dataframe(df['金額'].describe().to_frame(), use_container_width=True)
                 # --- 対話形式の質問 ---
                 st.header("あなたの支出管理について教えてください")
@@ -281,7 +283,8 @@ def main():
                     st.write("【総合的な提案】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
             else:
                 st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
-                st.write("検出された列名:", df.columns.tolist())
+                with st.expander("検出された列名", expanded=False):
+                    st.write(df.columns.tolist())
                 st.write("データの最初の5行:", df.head())
         except Exception as e:
             st.error(f"エラーが発生しました: {str(e)}")
