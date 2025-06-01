@@ -11,7 +11,10 @@ import matplotlib.font_manager as fm
 import urllib.request
 
 # --- 日本語フォント設定（IPAexGothicを自動DL＆適用） ---
+font_path_global = None
+
 def set_japanese_font():
+    global font_path_global
     font_url = "https://github.com/googlefonts/ipafont/raw/main/fonts/ttf/ipaexg.ttf"
     font_path = os.path.join(tempfile.gettempdir(), "ipaexg.ttf")
     if not os.path.exists(font_path):
@@ -21,6 +24,7 @@ def set_japanese_font():
             return  # ダウンロード失敗時は何もしない
     plt.rcParams['font.family'] = fm.FontProperties(fname=font_path).get_name()
     mpl.rcParams['axes.unicode_minus'] = False
+    font_path_global = font_path
 set_japanese_font()
 
 # --- ページ設定とカスタムCSS ---
@@ -149,11 +153,18 @@ def read_excel_with_auto_header(uploaded_file):
     
     return df
 
-def main():
-    # タイトル（スマホでも一行表示＆改行抑制）
-    st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
+# --- ページ遷移用ヘルパー ---
+def get_page():
+    query = st.experimental_get_query_params()
+    return query.get("page", ["main"])[0]
 
-    # PDF→Excel変換手順（リンクはタップで新規タブ遷移）
+def set_page(page_name):
+    st.experimental_set_query_params(page=page_name)
+
+def main():
+    page = get_page()
+    # タイトル・デザイン共通
+    st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
     st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
     st.markdown("""
     <div style='background-color: #f0f2f6; padding: 0.7rem; border-radius: 5px; font-size: 1rem;'>
@@ -164,149 +175,204 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if uploaded_file:
-        try:
-            df = read_excel_with_auto_header(uploaded_file)
-            st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
-            # 検出された列名だけ折りたたみ表示
-            with st.expander("検出された列名", expanded=False):
-                st.write(df.columns.tolist())
-            st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
-
-            # 日付・金額の列名推定（改善版）
-            date_col, amount_col = find_date_and_amount_columns(df)
-            if date_col and amount_col:
-                df = df[[date_col, amount_col]].dropna()
-                df.columns = ['日付', '金額']
-                try:
-                    df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
-                except:
-                    df['日付'] = pd.to_datetime(df['日付'].astype(str).str.replace('年', '-').str.replace('月', '-').str.replace('日', ''), errors='coerce')
-                try:
-                    df['金額'] = pd.to_numeric(df['金額'].astype(str).str.replace('¥', '').str.replace('￥', '').str.replace(',', '').str.replace('円', ''), errors='coerce')
-                except:
-                    df['金額'] = pd.to_numeric(df['金額'], errors='coerce')
-                df = df.dropna()
-                if len(df) == 0:
-                    st.error("有効なデータが見つかりませんでした。データの形式を確認してください。")
-                    return
-                # --- グラフを一画面に表示（余白最小化） ---
-                st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
-                try:
-                    # 月次支出の推移
-                    st.subheader("月次支出の推移")
-                    set_japanese_font()
-                    fig1, ax1 = plt.subplots(figsize=(6, 2.5))
-                    monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
-                    monthly.plot(kind='bar', ax=ax1, color="#1976D2")
-                    ax1.set_title('月次支出の推移', fontsize=13)
-                    ax1.set_xlabel('')
-                    ax1.set_ylabel('金額')
-                    plt.xticks(rotation=45, fontsize=9)
-                    plt.yticks(fontsize=9)
-                    plt.tight_layout()
-                    st.pyplot(fig1)
-                    plt.close(fig1)
-                except Exception as e:
-                    st.error(f"月次支出の推移グラフの描画でエラー: {e}")
-                try:
-                    # 日次支出の分布
-                    st.subheader("日次支出の分布")
-                    set_japanese_font()
-                    fig2, ax2 = plt.subplots(figsize=(6, 2.5))
-                    sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
-                    ax2.set_title('日次支出の分布', fontsize=13)
-                    ax2.set_xlabel('金額')
-                    ax2.set_ylabel('件数')
-                    plt.xticks(fontsize=9)
-                    plt.yticks(fontsize=9)
-                    plt.tight_layout()
-                    st.pyplot(fig2)
-                    plt.close(fig2)
-                except Exception as e:
-                    st.error(f"日次支出の分布グラフの描画でエラー: {e}")
-                try:
-                    # 曜日別の平均支出
-                    st.subheader("曜日別の平均支出")
-                    set_japanese_font()
-                    fig3, ax3 = plt.subplots(figsize=(6, 2.5))
-                    df['曜日'] = df['日付'].dt.day_name()
-                    weekday = df.groupby('曜日')['金額'].mean().reindex(
-                        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
-                    weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
-                    ax3.set_title('曜日別の平均支出', fontsize=13)
-                    ax3.set_xlabel('')
-                    ax3.set_ylabel('平均金額')
-                    plt.xticks(fontsize=9)
-                    plt.yticks(fontsize=9)
-                    plt.tight_layout()
-                    st.pyplot(fig3)
-                    plt.close(fig3)
-                except Exception as e:
-                    st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
-                st.markdown('</div>', unsafe_allow_html=True)
-                # --- 基本統計量 ---
-                st.subheader("支出の基本統計量")
-                st.dataframe(df['金額'].describe().to_frame())
-                # --- 対話形式の質問 ---
-                st.header("あなたの支出管理について教えてください")
-                with st.form("user_input_form"):
-                    high_expense_days = df.groupby('日付')['金額'].sum()
-                    high_expense_days = high_expense_days[high_expense_days > high_expense_days.mean() + high_expense_days.std()]
-                    if not high_expense_days.empty:
-                        st.write("高額支出日:", ', '.join(high_expense_days.index.strftime('%Y-%m-%d')))
-                        st.write(f"これらの日の平均支出額: ¥{high_expense_days.mean():,.0f}")
-                        high_expense_purpose = st.text_input("これらの高額支出は主にどのような用途でしたか？")
-                        high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
-                        high_expense_future = st.text_input("今後同様の支出を予定していますか？")
-                    else:
-                        high_expense_purpose = high_expense_necessity = high_expense_future = ""
-                    current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？")
-                    future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
-                    saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
-                    lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
-                    submitted = st.form_submit_button("提案を表示")
-                if submitted:
-                    st.header("あなたへの具体的な提案")
-                    st.markdown("### 回答まとめ")
-                    table = {
-                        "高額支出の用途": high_expense_purpose,
-                        "必要性": high_expense_necessity,
-                        "今後の予定": high_expense_future,
-                        "気になる支出": current_concerns,
-                        "将来の目標": future_goals,
-                        "節約目標": saving_goal,
-                        "改善したい習慣": lifestyle_improvements
-                    }
-                    st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
-                    st.markdown("### 提案")
-                    if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
-                        st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
-                        st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
-                    elif high_expense_purpose:
-                        st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
-                        st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
-                    if current_concerns:
-                        st.write(f"【{current_concerns}に関する提案】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
-                    if future_goals:
-                        st.write(f"【{future_goals}の実現に向けた提案】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
-                    if saving_goal:
-                        st.write(f"【{saving_goal}の達成に向けた提案】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
-                    if lifestyle_improvements:
-                        st.write(f"【{lifestyle_improvements}の改善に向けた提案】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
-                    st.write("【総合的な提案】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
-            else:
-                st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
+    if page == "main":
+        st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
+        st.markdown('</div>', unsafe_allow_html=True)
+        if uploaded_file:
+            try:
+                df = read_excel_with_auto_header(uploaded_file)
+                st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
+                # 検出された列名だけ折りたたみ表示
                 with st.expander("検出された列名", expanded=False):
                     st.write(df.columns.tolist())
-                st.write("データの最初の5行:", df.head())
-        except Exception as e:
-            st.error(f"エラーが発生しました: {str(e)}")
-            st.write("ファイルの形式や内容を確認してください。")
+                st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
+
+                # 日付・金額の列名推定（改善版）
+                date_col, amount_col = find_date_and_amount_columns(df)
+                if date_col and amount_col:
+                    df = df[[date_col, amount_col]].dropna()
+                    df.columns = ['日付', '金額']
+                    try:
+                        df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
+                    except:
+                        df['日付'] = pd.to_datetime(df['日付'].astype(str).str.replace('年', '-').str.replace('月', '-').str.replace('日', ''), errors='coerce')
+                    try:
+                        df['金額'] = pd.to_numeric(df['金額'].astype(str).str.replace('¥', '').str.replace('￥', '').str.replace(',', '').str.replace('円', ''), errors='coerce')
+                    except:
+                        df['金額'] = pd.to_numeric(df['金額'], errors='coerce')
+                    df = df.dropna()
+                    if len(df) == 0:
+                        st.error("有効なデータが見つかりませんでした。データの形式を確認してください。")
+                        return
+                    # --- グラフを一画面に表示（余白最小化） ---
+                    st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
+                    try:
+                        # 月次支出の推移
+                        st.subheader("月次支出の推移")
+                        set_japanese_font()
+                        fp = fm.FontProperties(fname=font_path_global)
+                        fig1, ax1 = plt.subplots(figsize=(6, 2.5))
+                        monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
+                        monthly.plot(kind='bar', ax=ax1, color="#1976D2")
+                        ax1.set_title('月次支出の推移', fontsize=13, fontproperties=fp)
+                        ax1.set_xlabel('', fontproperties=fp)
+                        ax1.set_ylabel('金額', fontproperties=fp)
+                        plt.xticks(rotation=45, fontsize=9, fontproperties=fp)
+                        plt.yticks(fontsize=9, fontproperties=fp)
+                        plt.tight_layout()
+                        st.pyplot(fig1)
+                        plt.close(fig1)
+                    except Exception as e:
+                        st.error(f"月次支出の推移グラフの描画でエラー: {e}")
+                    try:
+                        # 日次支出の分布
+                        st.subheader("日次支出の分布")
+                        set_japanese_font()
+                        fp = fm.FontProperties(fname=font_path_global)
+                        fig2, ax2 = plt.subplots(figsize=(6, 2.5))
+                        sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
+                        ax2.set_title('日次支出の分布', fontsize=13, fontproperties=fp)
+                        ax2.set_xlabel('金額', fontproperties=fp)
+                        ax2.set_ylabel('件数', fontproperties=fp)
+                        plt.xticks(fontsize=9, fontproperties=fp)
+                        plt.yticks(fontsize=9, fontproperties=fp)
+                        plt.tight_layout()
+                        st.pyplot(fig2)
+                        plt.close(fig2)
+                    except Exception as e:
+                        st.error(f"日次支出の分布グラフの描画でエラー: {e}")
+                    try:
+                        # 曜日別の平均支出
+                        st.subheader("曜日別の平均支出")
+                        set_japanese_font()
+                        fp = fm.FontProperties(fname=font_path_global)
+                        fig3, ax3 = plt.subplots(figsize=(6, 2.5))
+                        df['曜日'] = df['日付'].dt.day_name()
+                        weekday = df.groupby('曜日')['金額'].mean().reindex(
+                            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                        weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
+                        ax3.set_title('曜日別の平均支出', fontsize=13, fontproperties=fp)
+                        ax3.set_xlabel('', fontproperties=fp)
+                        ax3.set_ylabel('平均金額', fontproperties=fp)
+                        plt.xticks(fontsize=9, fontproperties=fp)
+                        plt.yticks(fontsize=9, fontproperties=fp)
+                        plt.tight_layout()
+                        st.pyplot(fig3)
+                        plt.close(fig3)
+                    except Exception as e:
+                        st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    # --- 基本統計量 ---
+                    st.subheader("支出の基本統計量")
+                    st.dataframe(df['金額'].describe().to_frame())
+                    # --- 対話形式の質問 ---
+                    st.header("あなたの支出管理について教えてください")
+                    with st.form("user_input_form"):
+                        high_expense_days = df.groupby('日付')['金額'].sum()
+                        high_expense_days = high_expense_days[high_expense_days > high_expense_days.mean() + high_expense_days.std()]
+                        if not high_expense_days.empty:
+                            st.write("高額支出日:", ', '.join(high_expense_days.index.strftime('%Y-%m-%d')))
+                            st.write(f"これらの日の平均支出額: ¥{high_expense_days.mean():,.0f}")
+                            high_expense_purpose = st.text_input("これらの高額支出は主にどのような用途でしたか？")
+                            high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
+                            high_expense_future = st.text_input("今後同様の支出を予定していますか？")
+                        else:
+                            high_expense_purpose = high_expense_necessity = high_expense_future = ""
+                        current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？")
+                        future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
+                        saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
+                        lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
+                        submitted = st.form_submit_button("提案を表示")
+                    if submitted:
+                        st.header("あなたへの具体的な提案")
+                        st.markdown("### 回答まとめ")
+                        table = {
+                            "高額支出の用途": high_expense_purpose,
+                            "必要性": high_expense_necessity,
+                            "今後の予定": high_expense_future,
+                            "気になる支出": current_concerns,
+                            "将来の目標": future_goals,
+                            "節約目標": saving_goal,
+                            "改善したい習慣": lifestyle_improvements
+                        }
+                        st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
+                        st.markdown("### 提案")
+                        if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
+                            st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
+                            st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
+                        elif high_expense_purpose:
+                            st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
+                            st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
+                        if current_concerns:
+                            st.write(f"【{current_concerns}に関する提案】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
+                        if future_goals:
+                            st.write(f"【{future_goals}の実現に向けた提案】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
+                        if saving_goal:
+                            st.write(f"【{saving_goal}の達成に向けた提案】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
+                        if lifestyle_improvements:
+                            st.write(f"【{lifestyle_improvements}の改善に向けた提案】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
+                        st.write("【総合的な提案】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
+                else:
+                    st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
+                    with st.expander("検出された列名", expanded=False):
+                        st.write(df.columns.tolist())
+                    st.write("データの最初の5行:", df.head())
+            except Exception as e:
+                st.error(f"エラーが発生しました: {str(e)}")
+                st.write("ファイルの形式や内容を確認してください。")
+            # --- AIと相談ボタン ---
+            st.markdown("<div style='text-align:center; margin-top:2rem;'>", unsafe_allow_html=True)
+            if st.button("AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
+                set_page("consult")
+                st.experimental_rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        elif page == "consult":
+            # --- 戻るボタン ---
+            if st.button("← 戻る", key="back_btn"):
+                set_page("main")
+                st.experimental_rerun()
+            st.markdown('<h2 class="sub-title">あなたの支出管理について教えてください</h2>', unsafe_allow_html=True)
+            # --- 既存の質問フォームをここに表示 ---
+            with st.form("user_input_form"):
+                high_expense_purpose = st.text_input("高額支出は主にどのような用途でしたか？")
+                high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
+                high_expense_future = st.text_input("今後同様の支出を予定していますか？")
+                current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？")
+                future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
+                saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
+                lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
+                submitted = st.form_submit_button("提案を表示")
+            if submitted:
+                st.header("あなたへの具体的な提案")
+                st.markdown("### 回答まとめ")
+                table = {
+                    "高額支出の用途": high_expense_purpose,
+                    "必要性": high_expense_necessity,
+                    "今後の予定": high_expense_future,
+                    "気になる支出": current_concerns,
+                    "将来の目標": future_goals,
+                    "節約目標": saving_goal,
+                    "改善したい習慣": lifestyle_improvements
+                }
+                st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
+                st.markdown("### 提案")
+                if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
+                    st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
+                    st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
+                elif high_expense_purpose:
+                    st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
+                    st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
+                if current_concerns:
+                    st.write(f"【{current_concerns}に関する提案】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
+                if future_goals:
+                    st.write(f"【{future_goals}の実現に向けた提案】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
+                if saving_goal:
+                    st.write(f"【{saving_goal}の達成に向けた提案】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
+                if lifestyle_improvements:
+                    st.write(f"【{lifestyle_improvements}の改善に向けた提案】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
+                st.write("【総合的な提案】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
 
 if __name__ == "__main__":
     main() 
