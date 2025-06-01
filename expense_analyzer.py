@@ -276,9 +276,6 @@ def main():
         st.markdown("</div>", unsafe_allow_html=True)
 
     elif page == "consult":
-        if st.button("← 戻る", key="back_btn"):
-            set_page("main")
-            st.experimental_rerun()
         st.markdown('<h2 class="sub-title">あなたの支出について教えてください</h2>', unsafe_allow_html=True)
         if 'advice_submitted' not in st.session_state:
             st.session_state['advice_submitted'] = False
@@ -330,6 +327,12 @@ def main():
             if st.session_state.get('lifestyle_improvements', ''):
                 st.write(f"【{st.session_state.get('lifestyle_improvements', '')}の改善に向けたアドバイス】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
             st.write("【総合的なアドバイス】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
+        # 戻るボタンは一番下に
+        st.markdown("<div style='text-align:left; margin-top:2rem;'>", unsafe_allow_html=True)
+        if st.button("← 戻る", key="back_btn_bottom"):
+            set_page("main")
+            st.experimental_rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main() 
