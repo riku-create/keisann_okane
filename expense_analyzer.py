@@ -164,7 +164,6 @@ def set_page(page_name):
 def main():
     page = get_page()
     if page == "main":
-        # タイトル・デザイン共通
         st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
         st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
         st.markdown("""
@@ -182,14 +181,11 @@ def main():
             try:
                 df = read_excel_with_auto_header(uploaded_file)
                 st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
-                # 検出された列名だけ折りたたみ表示
                 with st.expander("検出された列名", expanded=False):
                     st.write(df.columns.tolist())
                 st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
-
-                # 日付・金額の列名推定（改善版）
                 date_col, amount_col = find_date_and_amount_columns(df)
-            if date_col and amount_col:
+                if date_col and amount_col:
                     df = df[[date_col, amount_col]].dropna()
                     df.columns = ['日付', '金額']
                     try:
@@ -206,9 +202,9 @@ def main():
                         return
                     # --- グラフを一画面に表示（余白最小化） ---
                     st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
+                    # 月次支出の推移
                     try:
-                        # 月次支出の推移
-            st.subheader("月次支出の推移")
+                        st.subheader("月次支出の推移")
                         set_japanese_font()
                         fp = fm.FontProperties(fname=font_path_global)
                         fig1, ax1 = plt.subplots(figsize=(6, 2.5))
@@ -224,9 +220,9 @@ def main():
                         plt.close(fig1)
                     except Exception as e:
                         st.error(f"月次支出の推移グラフの描画でエラー: {e}")
+                    # 日次支出の分布
                     try:
-                        # 日次支出の分布
-            st.subheader("日次支出の分布")
+                        st.subheader("日次支出の分布")
                         set_japanese_font()
                         fp = fm.FontProperties(fname=font_path_global)
                         fig2, ax2 = plt.subplots(figsize=(6, 2.5))
@@ -241,15 +237,15 @@ def main():
                         plt.close(fig2)
                     except Exception as e:
                         st.error(f"日次支出の分布グラフの描画でエラー: {e}")
+                    # 曜日別の平均支出
                     try:
-                        # 曜日別の平均支出
-        st.subheader("曜日別の平均支出")
+                        st.subheader("曜日別の平均支出")
                         set_japanese_font()
                         fp = fm.FontProperties(fname=font_path_global)
                         fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                         df['曜日'] = df['日付'].dt.day_name()
                         weekday = df.groupby('曜日')['金額'].mean().reindex(
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
                         weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
                         ax3.set_title('曜日別の平均支出', fontsize=13, fontproperties=fp)
                         ax3.set_xlabel('', fontproperties=fp)
@@ -263,7 +259,7 @@ def main():
                         st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
                     st.markdown('</div>', unsafe_allow_html=True)
                     # --- 基本統計量 ---
-        st.subheader("支出の基本統計量")
+                    st.subheader("支出の基本統計量")
                     st.dataframe(df['金額'].describe().to_frame())
                 else:
                     st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
@@ -273,58 +269,55 @@ def main():
             except Exception as e:
                 st.error(f"エラーが発生しました: {str(e)}")
                 st.write("ファイルの形式や内容を確認してください。")
-            # --- AIと相談ボタンのみ表示 ---
-            st.markdown("<div style='text-align:center; margin-top:2rem;'>", unsafe_allow_html=True)
-            if st.button("AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
-                set_page("consult")
-                st.experimental_rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; margin-top:2rem;'>", unsafe_allow_html=True)
+        if st.button("AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
+            set_page("consult")
+            st.experimental_rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        elif page == "consult":
-            # --- 戻るボタンを上部に追加 ---
-            if st.button("← 戻る", key="back_btn"):
-                set_page("main")
-                st.experimental_rerun()
-            # タイトルと質問フォームのみ表示
-            st.markdown('<h2 class="sub-title">あなたの支出について教えてください</h2>', unsafe_allow_html=True)
-            with st.form("user_input_form"):
-                high_expense_purpose = st.text_input("高額支出は主にどのような用途でしたか？")
-                high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
-                high_expense_future = st.text_input("今後同様の支出を予定していますか？")
-                current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？")
-                future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
-                saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
-                lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
-                submitted = st.form_submit_button("アドバイスを表示")
-            if submitted:
-                st.header("支出を抑えるためのアドバイス")
-                st.markdown("### 回答まとめ")
-                table = {
-                    "高額支出の用途": high_expense_purpose,
-                    "必要性": high_expense_necessity,
-                    "今後の予定": high_expense_future,
-                    "気になる支出": current_concerns,
-                    "将来の目標": future_goals,
-                    "節約目標": saving_goal,
-                    "改善したい習慣": lifestyle_improvements
-                }
-                st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
-                st.markdown("### アドバイス")
-                if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
-                    st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
-                    st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
-                elif high_expense_purpose:
-                    st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
-                    st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
-                if current_concerns:
-                    st.write(f"【{current_concerns}に関するアドバイス】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
-                if future_goals:
-                    st.write(f"【{future_goals}の実現に向けたアドバイス】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
-                if saving_goal:
-                    st.write(f"【{saving_goal}の達成に向けたアドバイス】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
-                if lifestyle_improvements:
-                    st.write(f"【{lifestyle_improvements}の改善に向けたアドバイス】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
-                st.write("【総合的なアドバイス】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
+    elif page == "consult":
+        if st.button("← 戻る", key="back_btn"):
+            set_page("main")
+            st.experimental_rerun()
+        st.markdown('<h2 class="sub-title">あなたの支出について教えてください</h2>', unsafe_allow_html=True)
+        with st.form("user_input_form"):
+            high_expense_purpose = st.text_input("高額支出は主にどのような用途でしたか？")
+            high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
+            high_expense_future = st.text_input("今後同様の支出を予定していますか？")
+            current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？")
+            future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
+            saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
+            lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
+            submitted = st.form_submit_button("アドバイスを表示")
+        if submitted:
+            st.header("支出を抑えるためのアドバイス")
+            st.markdown("### 回答まとめ")
+            table = {
+                "高額支出の用途": high_expense_purpose,
+                "必要性": high_expense_necessity,
+                "今後の予定": high_expense_future,
+                "気になる支出": current_concerns,
+                "将来の目標": future_goals,
+                "節約目標": saving_goal,
+                "改善したい習慣": lifestyle_improvements
+            }
+            st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
+            st.markdown("### アドバイス")
+            if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
+                st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
+                st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
+            elif high_expense_purpose:
+                st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
+                st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
+            if current_concerns:
+                st.write(f"【{current_concerns}に関するアドバイス】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
+            if future_goals:
+                st.write(f"【{future_goals}の実現に向けたアドバイス】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
+            if saving_goal:
+                st.write(f"【{saving_goal}の達成に向けたアドバイス】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
+            if lifestyle_improvements:
+                st.write(f"【{lifestyle_improvements}の改善に向けたアドバイス】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
+            st.write("【総合的なアドバイス】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
 
 if __name__ == "__main__":
     main() 
