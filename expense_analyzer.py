@@ -245,6 +245,7 @@ def main():
         st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
         st.markdown('</div>', unsafe_allow_html=True)
+        ai_button_visible = False
         if uploaded_file:
             try:
                 df = read_excel_with_auto_header(uploaded_file)
@@ -326,6 +327,7 @@ def main():
                     # --- 基本統計量 ---
                     st.subheader("支出の基本統計量")
                     st.dataframe(df['金額'].describe().to_frame())
+                    ai_button_visible = True
                 else:
                     st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
                     with st.expander("検出された列名", expanded=False):
@@ -334,11 +336,13 @@ def main():
             except Exception as e:
                 st.error(f"エラーが発生しました: {str(e)}")
                 st.write("ファイルの形式や内容を確認してください。")
-        st.markdown("<div style='text-align:center; margin-top:2rem;'>", unsafe_allow_html=True)
-        if st.button("🤖 AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
-            set_page("consult")
-            st.experimental_rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+        # AIと相談ボタンはグラフ表示後のみ
+        if ai_button_visible:
+            st.markdown("<div style='text-align:center; margin-top:2rem;'>", unsafe_allow_html=True)
+            if st.button("🤖 AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
+                set_page("consult")
+                st.experimental_rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
     elif page == "consult":
         st.markdown('<h2 class="sub-title">あなたの支出について教えてください</h2>', unsafe_allow_html=True)
