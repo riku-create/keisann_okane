@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib as mpl
 import tempfile
 import os
+import re
 
 # 日本語フォントの設定
 plt.rcParams['font.family'] = 'DejaVu Sans'
@@ -33,12 +34,12 @@ def detect_header_row(df_preview):
         score += str_count * 2
         
         # 日付っぽい文字列があれば加点
-        date_keywords = ['日付', 'date', 'DATE', '日', '年月日']
+        date_keywords = ['日付', 'date', 'DATE', '日', '年月日', '取引日', '日時', 'timestamp', '日付/時間']
         if any(any(kw in str(x).lower() for kw in date_keywords) for x in row if pd.notnull(x)):
             score += 3
             
         # 金額っぽい文字列があれば加点
-        amount_keywords = ['金額', '金', 'amount', 'AMOUNT', '円', '¥']
+        amount_keywords = ['金額', '金', 'amount', 'AMOUNT', '円', '¥', '支出', '支払', '合計', 'total', 'price', '価格']
         if any(any(kw in str(x).lower() for kw in amount_keywords) for x in row if pd.notnull(x)):
             score += 3
             
@@ -48,10 +49,50 @@ def detect_header_row(df_preview):
             
     return best_row
 
+def find_date_and_amount_columns(df):
+    """日付と金額の列を探す（より広い範囲で検索）"""
+    date_col = None
+    amount_col = None
+    
+    # 列名の直接検索
+    for col in df.columns:
+        col_str = str(col).lower()
+        if any(k in col_str for k in ['日付', 'date', '日', '年月日', '取引日', '日時', 'timestamp', '日付/時間']):
+            date_col = col
+        elif any(k in col_str for k in ['金額', '金', 'amount', '円', '¥', '支出', '支払', '合計', 'total', 'price', '価格']):
+            amount_col = col
+    
+    # 列名で見つからない場合、データの内容で検索
+    if not (date_col and amount_col):
+        for col in df.columns:
+            # 最初の100行のデータを確認
+            sample_data = df[col].head(100).astype(str)
+            
+            # 日付っぽいデータを探す
+            if not date_col:
+                date_patterns = [
+                    r'\d{4}[-/]\d{1,2}[-/]\d{1,2}',  # YYYY-MM-DD
+                    r'\d{1,2}[-/]\d{1,2}[-/]\d{4}',  # DD-MM-YYYY
+                    r'\d{4}年\d{1,2}月\d{1,2}日',     # 日本語形式
+                ]
+                if any(any(re.search(pattern, str(x)) for x in sample_data) for pattern in date_patterns):
+                    date_col = col
+            
+            # 金額っぽいデータを探す
+            if not amount_col:
+                amount_patterns = [
+                    r'[¥￥]?\d+[,\d]*円?',  # 日本円
+                    r'\d+[,\d]*\.?\d*',     # 数値
+                ]
+                if any(any(re.search(pattern, str(x)) for x in sample_data) for pattern in amount_patterns):
+                    amount_col = col
+    
+    return date_col, amount_col
+
 def read_excel_with_auto_header(uploaded_file):
     """Excelファイルを読み込み、最適なヘッダー行を自動検出"""
-    # 先頭10行を仮読み込み
-    df_preview = pd.read_excel(uploaded_file, header=None, nrows=10)
+    # 先頭20行を仮読み込み（検索範囲を拡大）
+    df_preview = pd.read_excel(uploaded_file, header=None, nrows=20)
     
     # 最適なヘッダー行を検出
     header_row = detect_header_row(df_preview)
@@ -83,22 +124,31 @@ def main():
             st.write("検出された列名:", df.columns.tolist())
             
             st.header("支出データの可視化")
-            # 日付・金額の列名推定
-            date_col = None
-            amount_col = None
-            for col in df.columns:
-                col_str = str(col).lower()
-                if any(k in col_str for k in ['日付', 'date', '日', '年月日']):
-                    date_col = col
-                elif any(k in col_str for k in ['金額', '金', 'amount', '円', '¥']):
-                    amount_col = col
+            # 日付・金額の列名推定（改善版）
+            date_col, amount_col = find_date_and_amount_columns(df)
             
             if date_col and amount_col:
                 df = df[[date_col, amount_col]].dropna()
                 df.columns = ['日付', '金額']
-                df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
-                df['金額'] = pd.to_numeric(df['金額'], errors='coerce')
+                
+                # 日付の変換を試みる（複数の形式に対応）
+                try:
+                    df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
+                except:
+                    # 日付形式が特殊な場合の処理
+                    df['日付'] = pd.to_datetime(df['日付'].astype(str).str.replace('年', '-').str.replace('月', '-').str.replace('日', ''), errors='coerce')
+                
+                # 金額の変換を試みる（複数の形式に対応）
+                try:
+                    df['金額'] = pd.to_numeric(df['金額'].astype(str).str.replace('¥', '').str.replace('￥', '').str.replace(',', '').str.replace('円', ''), errors='coerce')
+                except:
+                    df['金額'] = pd.to_numeric(df['金額'], errors='coerce')
+                
                 df = df.dropna()
+                
+                if len(df) == 0:
+                    st.error("有効なデータが見つかりませんでした。データの形式を確認してください。")
+                    return
                 
                 # 月次支出の推移
                 st.subheader("月次支出の推移")
@@ -181,6 +231,7 @@ def main():
             else:
                 st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
                 st.write("検出された列名:", df.columns.tolist())
+                st.write("データの最初の5行:", df.head())
         except Exception as e:
             st.error(f"エラーが発生しました: {str(e)}")
             st.write("ファイルの形式や内容を確認してください。")
