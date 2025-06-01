@@ -10,22 +10,51 @@ import re
 import matplotlib.font_manager as fm
 import urllib.request
 
-# --- 日本語フォント設定（IPAexGothicを自動DL＆適用） ---
-font_path_global = None
-
-def set_japanese_font():
-    global font_path_global
-    font_url = "https://github.com/googlefonts/ipafont/raw/main/fonts/ttf/ipaexg.ttf"
-    font_path = os.path.join(tempfile.gettempdir(), "ipaexg.ttf")
-    if not os.path.exists(font_path):
+# --- 日本語フォント設定（IPAexGothicとNoto Sans CJK JPを自動DL＆優先適用） ---
+def get_japanese_font_paths():
+    font_paths = []
+    # IPAexGothic
+    ipaex_url = "https://github.com/googlefonts/ipafont/raw/main/fonts/ttf/ipaexg.ttf"
+    ipaex_path = os.path.join(tempfile.gettempdir(), "ipaexg.ttf")
+    if not os.path.exists(ipaex_path):
         try:
-            urllib.request.urlretrieve(font_url, font_path)
+            urllib.request.urlretrieve(ipaex_url, ipaex_path)
         except Exception:
-            return  # ダウンロード失敗時は何もしない
-    plt.rcParams['font.family'] = fm.FontProperties(fname=font_path).get_name()
-    mpl.rcParams['axes.unicode_minus'] = False
-    font_path_global = font_path
-set_japanese_font()
+            pass
+    if os.path.exists(ipaex_path):
+        font_paths.append(ipaex_path)
+    # Noto Sans CJK JP
+    noto_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf"
+    noto_path = os.path.join(tempfile.gettempdir(), "NotoSansCJKjp-Regular.otf")
+    if not os.path.exists(noto_path):
+        try:
+            urllib.request.urlretrieve(noto_url, noto_path)
+        except Exception:
+            pass
+    if os.path.exists(noto_path):
+        font_paths.append(noto_path)
+    return font_paths
+
+font_paths = get_japanese_font_paths()
+font_names = []
+for path in font_paths:
+    try:
+        font_names.append(fm.FontProperties(fname=path).get_name())
+    except Exception:
+        pass
+# フォールバック英語フォントも追加
+font_names += ["Arial", "sans-serif"]
+plt.rcParams['font.family'] = font_names
+mpl.rcParams['axes.unicode_minus'] = False
+
+def get_fontproperties():
+    # 最初に見つかった日本語フォントを優先
+    for path in font_paths:
+        try:
+            return fm.FontProperties(fname=path)
+        except Exception:
+            continue
+    return fm.FontProperties()
 
 # --- ページ設定とカスタムCSS ---
 st.set_page_config(
@@ -205,8 +234,7 @@ def main():
                     # 月次支出の推移
                     try:
                         st.subheader("月次支出の推移")
-                        set_japanese_font()
-                        fp = fm.FontProperties(fname=font_path_global)
+                        fp = get_fontproperties()
                         fig1, ax1 = plt.subplots(figsize=(6, 2.5))
                         monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
                         monthly.plot(kind='bar', ax=ax1, color="#1976D2")
@@ -223,8 +251,7 @@ def main():
                     # 日次支出の分布
                     try:
                         st.subheader("日次支出の分布")
-                        set_japanese_font()
-                        fp = fm.FontProperties(fname=font_path_global)
+                        fp = get_fontproperties()
                         fig2, ax2 = plt.subplots(figsize=(6, 2.5))
                         sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
                         ax2.set_title('日次支出の分布', fontsize=13, fontproperties=fp)
@@ -240,8 +267,7 @@ def main():
                     # 曜日別の平均支出
                     try:
                         st.subheader("曜日別の平均支出")
-                        set_japanese_font()
-                        fp = fm.FontProperties(fname=font_path_global)
+                        fp = get_fontproperties()
                         fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                         df['曜日'] = df['日付'].dt.day_name()
                         weekday = df.groupby('曜日')['金額'].mean().reindex(
