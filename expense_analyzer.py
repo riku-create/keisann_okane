@@ -84,6 +84,10 @@ body, .stApp {
     align-items: center;
     justify-content: center;
     gap: 0.7rem;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
 }
 .sub-title {
     font-size: 1.3rem;
@@ -232,7 +236,7 @@ def set_page(page_name):
 def main():
     page = get_page()
     if page == "main":
-        st.markdown('<h1 class="main-title">💰 支出分析・削減提案システム</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-title">💰 支出分析・<br>削減提案システム</h1>', unsafe_allow_html=True)
         st.markdown('<h2 class="sub-title">📄 PDF→Excel変換手順</h2>', unsafe_allow_html=True)
         st.markdown("""
         <div style='background-color: #f0f2f6; padding: 0.7rem; border-radius: 5px; font-size: 1rem;'>
