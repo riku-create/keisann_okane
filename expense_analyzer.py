@@ -53,7 +53,7 @@ def get_fontproperties():
         try:
             return fm.FontProperties(fname=path)
         except Exception:
-            continue
+                        continue
     return fm.FontProperties()
 
 # --- ページ設定とカスタムCSS ---
@@ -66,35 +66,74 @@ st.set_page_config(
 st.markdown("""
 <style>
 body, .stApp {
-    background-color: #FFFDE7 !important;
+    background: linear-gradient(135deg, #e0ffe8 0%, #e0f7fa 100%) !important;
+    font-family: 'Noto Sans JP', 'Rounded M+ 1c', 'Arial Rounded MT Bold', 'Arial', 'sans-serif' !important;
 }
 .main-title {
-    font-size: clamp(1.2rem, 6vw, 2.2rem);
+    font-size: 2.3rem;
     font-weight: bold;
-    color: #1E88E5;
+    color: #26c281;
     text-align: center;
-    padding: 0.5rem 0 0.5rem 0;
-    margin-bottom: 1.2rem;
-    border-bottom: 2px solid #1E88E5;
-    white-space: nowrap;
-    overflow: visible;
-    text-overflow: unset;
+    padding: 1.2rem 0 1.2rem 0;
+    margin-bottom: 1.5rem;
+    border-radius: 1.5rem;
+    background: #ffffffcc;
+    box-shadow: 0 4px 16px #b2dfdb55;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
 }
 .sub-title {
-    font-size: 1.2rem;
-    color: #424242;
-    margin: 0.5rem 0 0.5rem 0;
+    font-size: 1.3rem;
+    color: #009688;
+    margin: 1.2rem 0 0.7rem 0;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 .stButton>button {
     width: 100%;
-    background-color: #1E88E5;
-    color: white;
+    background: linear-gradient(90deg, #a8ff78 0%, #78ffd6 100%);
+    color: #222;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 2rem;
+    border: none;
+    box-shadow: 0 2px 8px #b2dfdb55;
+    padding: 0.7rem 0;
+    margin: 0.5rem 0 1.2rem 0;
+    transition: background 0.2s, color 0.2s;
 }
 .stButton>button:hover {
-    background-color: #1565C0;
+    background: linear-gradient(90deg, #78ffd6 0%, #a8ff78 100%);
+    color: #009688;
 }
-.stMarkdown, .stTextInput, .stDataFrame, .stFileUploader, .stAlert {
-    background-color: #FFFDE7 !important;
+.stTextInput>div>input {
+    border-radius: 1.2rem !important;
+    border: 1.5px solid #b2dfdb;
+    background: #f8fffa;
+    font-size: 1.05rem;
+    padding: 0.5rem 1rem;
+}
+.stDataFrame, .stTable {
+    background: #ffffffcc !important;
+    border-radius: 1.2rem !important;
+    box-shadow: 0 2px 8px #b2dfdb33;
+}
+.stAlert {
+    border-radius: 1.2rem !important;
+}
+.stExpander, .stExpanderHeader {
+    border-radius: 1.2rem !important;
+    background: #e0ffe8 !important;
+}
+.stFileUploader {
+    background: #f8fffa !important;
+    border-radius: 1.2rem !important;
+    padding: 1rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -193,8 +232,8 @@ def set_page(page_name):
 def main():
     page = get_page()
     if page == "main":
-        st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
-        st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-title">💰 支出分析・削減提案システム</h1>', unsafe_allow_html=True)
+        st.markdown('<h2 class="sub-title">📄 PDF→Excel変換手順</h2>', unsafe_allow_html=True)
         st.markdown("""
         <div style='background-color: #f0f2f6; padding: 0.7rem; border-radius: 5px; font-size: 1rem;'>
         1. スマホやパソコンで<a href="https://smallpdf.com/jp/pdf-to-excel" target="_blank">Smallpdf</a>や<a href="https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html" target="_blank">Adobe Acrobat</a>などの無料Webサービスを開きます。<br>
@@ -206,7 +245,7 @@ def main():
         st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
         st.markdown('</div>', unsafe_allow_html=True)
-        if uploaded_file:
+    if uploaded_file:
             try:
                 df = read_excel_with_auto_header(uploaded_file)
                 st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
@@ -214,7 +253,7 @@ def main():
                     st.write(df.columns.tolist())
                 st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
                 date_col, amount_col = find_date_and_amount_columns(df)
-                if date_col and amount_col:
+            if date_col and amount_col:
                     df = df[[date_col, amount_col]].dropna()
                     df.columns = ['日付', '金額']
                     try:
@@ -233,7 +272,7 @@ def main():
                     st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
                     # 月次支出の推移
                     try:
-                        st.subheader("月次支出の推移")
+            st.subheader("月次支出の推移")
                         fp = get_fontproperties()
                         fig1, ax1 = plt.subplots(figsize=(6, 2.5))
                         monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
@@ -250,7 +289,7 @@ def main():
                         st.error(f"月次支出の推移グラフの描画でエラー: {e}")
                     # 日次支出の分布
                     try:
-                        st.subheader("日次支出の分布")
+            st.subheader("日次支出の分布")
                         fp = get_fontproperties()
                         fig2, ax2 = plt.subplots(figsize=(6, 2.5))
                         sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
@@ -266,12 +305,12 @@ def main():
                         st.error(f"日次支出の分布グラフの描画でエラー: {e}")
                     # 曜日別の平均支出
                     try:
-                        st.subheader("曜日別の平均支出")
+        st.subheader("曜日別の平均支出")
                         fp = get_fontproperties()
                         fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                         df['曜日'] = df['日付'].dt.day_name()
                         weekday = df.groupby('曜日')['金額'].mean().reindex(
-                            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
                         weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
                         ax3.set_title('曜日別の平均支出', fontsize=13, fontproperties=fp)
                         ax3.set_xlabel('', fontproperties=fp)
@@ -285,7 +324,7 @@ def main():
                         st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
                     st.markdown('</div>', unsafe_allow_html=True)
                     # --- 基本統計量 ---
-                    st.subheader("支出の基本統計量")
+        st.subheader("支出の基本統計量")
                     st.dataframe(df['金額'].describe().to_frame())
                 else:
                     st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
@@ -296,7 +335,7 @@ def main():
                 st.error(f"エラーが発生しました: {str(e)}")
                 st.write("ファイルの形式や内容を確認してください。")
         st.markdown("<div style='text-align:center; margin-top:2rem;'>", unsafe_allow_html=True)
-        if st.button("AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
+        if st.button("🤖 AIと相談", key="consult_btn", help="AIと一緒に支出管理を考える"):
             set_page("consult")
             st.experimental_rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -314,7 +353,7 @@ def main():
             saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）", value=st.session_state.get('saving_goal', ''))
             lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？", value=st.session_state.get('lifestyle_improvements', ''))
             submitted = st.form_submit_button("アドバイスを表示")
-            if submitted:
+        if submitted:
                 st.session_state['advice_submitted'] = True
                 st.session_state['high_expense_purpose'] = high_expense_purpose
                 st.session_state['high_expense_necessity'] = high_expense_necessity
