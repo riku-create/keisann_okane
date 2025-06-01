@@ -209,7 +209,7 @@ def main():
                     plt.xticks(rotation=45, fontsize=9)
                     plt.yticks(fontsize=9)
                     plt.tight_layout()
-                    st.pyplot(fig1, use_container_width=True)
+                    st.pyplot(fig1)
                     plt.close(fig1)
                 except Exception as e:
                     st.error(f"月次支出の推移グラフの描画でエラー: {e}")
@@ -225,7 +225,7 @@ def main():
                     plt.xticks(fontsize=9)
                     plt.yticks(fontsize=9)
                     plt.tight_layout()
-                    st.pyplot(fig2, use_container_width=True)
+                    st.pyplot(fig2)
                     plt.close(fig2)
                 except Exception as e:
                     st.error(f"日次支出の分布グラフの描画でエラー: {e}")
@@ -244,14 +244,14 @@ def main():
                     plt.xticks(fontsize=9)
                     plt.yticks(fontsize=9)
                     plt.tight_layout()
-                    st.pyplot(fig3, use_container_width=True)
+                    st.pyplot(fig3)
                     plt.close(fig3)
                 except Exception as e:
                     st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
                 st.markdown('</div>', unsafe_allow_html=True)
                 # --- 基本統計量 ---
                 st.subheader("支出の基本統計量")
-                st.dataframe(df['金額'].describe().to_frame(), use_container_width=True)
+                st.dataframe(df['金額'].describe().to_frame())
                 # --- 対話形式の質問 ---
                 st.header("あなたの支出管理について教えてください")
                 with st.form("user_input_form"):
