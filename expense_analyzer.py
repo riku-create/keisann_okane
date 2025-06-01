@@ -19,6 +19,34 @@ st.set_page_config(
     layout="wide"
 )
 
+# カスタムCSSの追加
+st.markdown("""
+<style>
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1E88E5;
+        text-align: center;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+        border-bottom: 3px solid #1E88E5;
+    }
+    .sub-title {
+        font-size: 1.5rem;
+        color: #424242;
+        margin: 1rem 0;
+    }
+    .stButton>button {
+        width: 100%;
+        background-color: #1E88E5;
+        color: white;
+    }
+    .stButton>button:hover {
+        background-color: #1565C0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 def detect_header_row(df_preview):
     """列名として最適な行を検出する"""
     best_row = 0
@@ -103,17 +131,25 @@ def read_excel_with_auto_header(uploaded_file):
     return df
 
 def main():
-    st.title("支出分析・削減提案システム")
+    # タイトルの表示を改善
+    st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
 
-    st.header("PDF→Excel変換手順")
+    # 変換手順の表示を改善
+    st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
     st.markdown("""
-1. スマホやパソコンで[Smallpdf](https://smallpdf.com/jp/pdf-to-excel)や[Adobe Acrobat](https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html)などの無料Webサービスを開きます。
-2. 変換したいPDFファイルをアップロードします。
-3. 変換ボタンを押してExcel（.xlsx）ファイルをダウンロードします。
-4. 下の「Excelファイルをアップロード」から変換したExcelファイルを選択してください。
-    """)
+    <div style='background-color: #f0f2f6; padding: 1rem; border-radius: 5px;'>
+    1. スマホやパソコンで[Smallpdf](https://smallpdf.com/jp/pdf-to-excel)や[Adobe Acrobat](https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html)などの無料Webサービスを開きます。<br>
+    2. 変換したいPDFファイルをアップロードします。<br>
+    3. 変換ボタンを押してExcel（.xlsx）ファイルをダウンロードします。<br>
+    4. 下の「Excelファイルをアップロード」から変換したExcelファイルを選択してください。
+    </div>
+    """, unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"]) 
+    # ファイルアップローダーのスタイル改善
+    st.markdown('<div style="margin: 2rem 0;">', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
+    st.markdown('</div>', unsafe_allow_html=True)
+
     if uploaded_file:
         try:
             # 自動ヘッダー検出を使用してExcelを読み込み
@@ -123,7 +159,8 @@ def main():
             # 列名の表示（デバッグ用）
             st.write("検出された列名:", df.columns.tolist())
             
-            st.header("支出データの可視化")
+            st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
+            
             # 日付・金額の列名推定（改善版）
             date_col, amount_col = find_date_and_amount_columns(df)
             
