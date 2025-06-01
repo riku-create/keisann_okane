@@ -280,43 +280,55 @@ def main():
             set_page("main")
             st.experimental_rerun()
         st.markdown('<h2 class="sub-title">あなたの支出について教えてください</h2>', unsafe_allow_html=True)
+        if 'advice_submitted' not in st.session_state:
+            st.session_state['advice_submitted'] = False
         with st.form("user_input_form"):
-            high_expense_purpose = st.text_input("高額支出は主にどのような用途でしたか？")
-            high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
-            high_expense_future = st.text_input("今後同様の支出を予定していますか？")
-            current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？")
-            future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
-            saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
-            lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
+            high_expense_purpose = st.text_input("高額支出は主にどのような用途でしたか？", value=st.session_state.get('high_expense_purpose', ''))
+            high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？", value=st.session_state.get('high_expense_necessity', ''))
+            high_expense_future = st.text_input("今後同様の支出を予定していますか？", value=st.session_state.get('high_expense_future', ''))
+            current_concerns = st.text_input("現在、特に気になっている支出項目はありますか？", value=st.session_state.get('current_concerns', ''))
+            future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？", value=st.session_state.get('future_goals', ''))
+            saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）", value=st.session_state.get('saving_goal', ''))
+            lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？", value=st.session_state.get('lifestyle_improvements', ''))
             submitted = st.form_submit_button("アドバイスを表示")
-        if submitted:
+            if submitted:
+                st.session_state['advice_submitted'] = True
+                st.session_state['high_expense_purpose'] = high_expense_purpose
+                st.session_state['high_expense_necessity'] = high_expense_necessity
+                st.session_state['high_expense_future'] = high_expense_future
+                st.session_state['current_concerns'] = current_concerns
+                st.session_state['future_goals'] = future_goals
+                st.session_state['saving_goal'] = saving_goal
+                st.session_state['lifestyle_improvements'] = lifestyle_improvements
+        # アドバイス表示
+        if st.session_state.get('advice_submitted', False):
             st.header("支出を抑えるためのアドバイス")
             st.markdown("### 回答まとめ")
             table = {
-                "高額支出の用途": high_expense_purpose,
-                "必要性": high_expense_necessity,
-                "今後の予定": high_expense_future,
-                "気になる支出": current_concerns,
-                "将来の目標": future_goals,
-                "節約目標": saving_goal,
-                "改善したい習慣": lifestyle_improvements
+                "高額支出の用途": st.session_state.get('high_expense_purpose', ''),
+                "必要性": st.session_state.get('high_expense_necessity', ''),
+                "今後の予定": st.session_state.get('high_expense_future', ''),
+                "気になる支出": st.session_state.get('current_concerns', ''),
+                "将来の目標": st.session_state.get('future_goals', ''),
+                "節約目標": st.session_state.get('saving_goal', ''),
+                "改善したい習慣": st.session_state.get('lifestyle_improvements', '')
             }
             st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
             st.markdown("### アドバイス")
-            if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
-                st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
+            if st.session_state.get('high_expense_necessity', '') and ('必要' in st.session_state.get('high_expense_necessity', '') or '必須' in st.session_state.get('high_expense_necessity', '')):
+                st.write(f"・{st.session_state.get('high_expense_purpose', '')}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
                 st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
-            elif high_expense_purpose:
-                st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
+            elif st.session_state.get('high_expense_purpose', ''):
+                st.write(f"・{st.session_state.get('high_expense_purpose', '')}に関する支出について、以下のような削減案を提案します：")
                 st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
-            if current_concerns:
-                st.write(f"【{current_concerns}に関するアドバイス】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
-            if future_goals:
-                st.write(f"【{future_goals}の実現に向けたアドバイス】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
-            if saving_goal:
-                st.write(f"【{saving_goal}の達成に向けたアドバイス】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
-            if lifestyle_improvements:
-                st.write(f"【{lifestyle_improvements}の改善に向けたアドバイス】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
+            if st.session_state.get('current_concerns', ''):
+                st.write(f"【{st.session_state.get('current_concerns', '')}に関するアドバイス】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
+            if st.session_state.get('future_goals', ''):
+                st.write(f"【{st.session_state.get('future_goals', '')}の実現に向けたアドバイス】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
+            if st.session_state.get('saving_goal', ''):
+                st.write(f"【{st.session_state.get('saving_goal', '')}の達成に向けたアドバイス】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
+            if st.session_state.get('lifestyle_improvements', ''):
+                st.write(f"【{st.session_state.get('lifestyle_improvements', '')}の改善に向けたアドバイス】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
             st.write("【総合的なアドバイス】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
 
 if __name__ == "__main__":
