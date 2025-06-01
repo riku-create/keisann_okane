@@ -163,19 +163,18 @@ def set_page(page_name):
 
 def main():
     page = get_page()
-    # タイトル・デザイン共通
-    st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
-    st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style='background-color: #f0f2f6; padding: 0.7rem; border-radius: 5px; font-size: 1rem;'>
-    1. スマホやパソコンで<a href="https://smallpdf.com/jp/pdf-to-excel" target="_blank">Smallpdf</a>や<a href="https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html" target="_blank">Adobe Acrobat</a>などの無料Webサービスを開きます。<br>
-    2. 変換したいPDFファイルをアップロードします。<br>
-    3. 変換ボタンを押してExcel（.xlsx）ファイルをダウンロードします。<br>
-    4. 下の「Excelファイルをアップロード」から変換したExcelファイルを選択してください。
-    </div>
-    """, unsafe_allow_html=True)
-
     if page == "main":
+        # タイトル・デザイン共通
+        st.markdown('<h1 class="main-title">支出分析・削減提案システム</h1>', unsafe_allow_html=True)
+        st.markdown('<h2 class="sub-title">PDF→Excel変換手順</h2>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style='background-color: #f0f2f6; padding: 0.7rem; border-radius: 5px; font-size: 1rem;'>
+        1. スマホやパソコンで<a href="https://smallpdf.com/jp/pdf-to-excel" target="_blank">Smallpdf</a>や<a href="https://www.adobe.com/jp/acrobat/online/pdf-to-excel.html" target="_blank">Adobe Acrobat</a>などの無料Webサービスを開きます。<br>
+        2. 変換したいPDFファイルをアップロードします。<br>
+        3. 変換ボタンを押してExcel（.xlsx）ファイルをダウンロードします。<br>
+        4. 下の「Excelファイルをアップロード」から変換したExcelファイルを選択してください。
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
         st.markdown('</div>', unsafe_allow_html=True)
@@ -190,7 +189,7 @@ def main():
 
                 # 日付・金額の列名推定（改善版）
                 date_col, amount_col = find_date_and_amount_columns(df)
-                if date_col and amount_col:
+            if date_col and amount_col:
                     df = df[[date_col, amount_col]].dropna()
                     df.columns = ['日付', '金額']
                     try:
@@ -209,7 +208,7 @@ def main():
                     st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
                     try:
                         # 月次支出の推移
-                        st.subheader("月次支出の推移")
+            st.subheader("月次支出の推移")
                         set_japanese_font()
                         fp = fm.FontProperties(fname=font_path_global)
                         fig1, ax1 = plt.subplots(figsize=(6, 2.5))
@@ -227,7 +226,7 @@ def main():
                         st.error(f"月次支出の推移グラフの描画でエラー: {e}")
                     try:
                         # 日次支出の分布
-                        st.subheader("日次支出の分布")
+            st.subheader("日次支出の分布")
                         set_japanese_font()
                         fp = fm.FontProperties(fname=font_path_global)
                         fig2, ax2 = plt.subplots(figsize=(6, 2.5))
@@ -244,13 +243,13 @@ def main():
                         st.error(f"日次支出の分布グラフの描画でエラー: {e}")
                     try:
                         # 曜日別の平均支出
-                        st.subheader("曜日別の平均支出")
+        st.subheader("曜日別の平均支出")
                         set_japanese_font()
                         fp = fm.FontProperties(fname=font_path_global)
                         fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                         df['曜日'] = df['日付'].dt.day_name()
                         weekday = df.groupby('曜日')['金額'].mean().reindex(
-                            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
                         weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
                         ax3.set_title('曜日別の平均支出', fontsize=13, fontproperties=fp)
                         ax3.set_xlabel('', fontproperties=fp)
@@ -264,7 +263,7 @@ def main():
                         st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
                     st.markdown('</div>', unsafe_allow_html=True)
                     # --- 基本統計量 ---
-                    st.subheader("支出の基本統計量")
+        st.subheader("支出の基本統計量")
                     st.dataframe(df['金額'].describe().to_frame())
                 else:
                     st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
@@ -286,8 +285,8 @@ def main():
             if st.button("← 戻る", key="back_btn"):
                 set_page("main")
                 st.experimental_rerun()
+            # タイトルと質問フォームのみ表示
             st.markdown('<h2 class="sub-title">あなたの支出について教えてください</h2>', unsafe_allow_html=True)
-            # --- 既存の質問フォームをここに表示 ---
             with st.form("user_input_form"):
                 high_expense_purpose = st.text_input("高額支出は主にどのような用途でしたか？")
                 high_expense_necessity = st.text_input("これらの支出は必要不可欠なものですか？")
@@ -296,9 +295,9 @@ def main():
                 future_goals = st.text_input("今後、支出を増やしたい（または減らしたい）項目はありますか？")
                 saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）")
                 lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？")
-                submitted = st.form_submit_button("提案を表示")
+                submitted = st.form_submit_button("アドバイスを表示")
             if submitted:
-                st.header("あなたへの具体的な提案")
+                st.header("支出を抑えるためのアドバイス")
                 st.markdown("### 回答まとめ")
                 table = {
                     "高額支出の用途": high_expense_purpose,
@@ -310,7 +309,7 @@ def main():
                     "改善したい習慣": lifestyle_improvements
                 }
                 st.table(pd.DataFrame(table.items(), columns=["項目", "内容"]))
-                st.markdown("### 提案")
+                st.markdown("### アドバイス")
                 if high_expense_necessity and ('必要' in high_expense_necessity or '必須' in high_expense_necessity):
                     st.write(f"・{high_expense_purpose}に関する支出は必要不可欠とのことですが、以下のような代替案を検討してみてはいかがでしょうか：")
                     st.write("- まとめ買いによる割引の活用\n- ポイントカードやクレジットカードの特典の活用\n- 季節や時期を考慮した購入タイミングの調整")
@@ -318,14 +317,14 @@ def main():
                     st.write(f"・{high_expense_purpose}に関する支出について、以下のような削減案を提案します：")
                     st.write("- 支出の優先順位付けの見直し\n- 代替手段の検討\n- 支出の頻度の調整")
                 if current_concerns:
-                    st.write(f"【{current_concerns}に関する提案】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
+                    st.write(f"【{current_concerns}に関するアドバイス】\n- 支出の詳細な記録と分析\n- 予算の設定と管理\n- 定期的な見直しと調整")
                 if future_goals:
-                    st.write(f"【{future_goals}の実現に向けた提案】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
+                    st.write(f"【{future_goals}の実現に向けたアドバイス】\n- 目標達成のための具体的なステップ\n- 進捗管理の方法\n- モチベーション維持のための工夫")
                 if saving_goal:
-                    st.write(f"【{saving_goal}の達成に向けた提案】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
+                    st.write(f"【{saving_goal}の達成に向けたアドバイス】\n- 目標金額の達成に向けた具体的なアクションプラン\n- 支出の優先順位付け\n- 節約の進捗管理方法")
                 if lifestyle_improvements:
-                    st.write(f"【{lifestyle_improvements}の改善に向けた提案】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
-                st.write("【総合的な提案】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
+                    st.write(f"【{lifestyle_improvements}の改善に向けたアドバイス】\n- 習慣化のための具体的なステップ\n- 継続的なモチベーション維持の方法\n- 進捗の可視化と振り返り")
+                st.write("【総合的なアドバイス】\n1. 支出の記録と分析\n2. 予算管理の徹底\n3. 継続的な改善")
 
 if __name__ == "__main__":
     main() 
