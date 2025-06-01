@@ -53,7 +53,7 @@ def get_fontproperties():
         try:
             return fm.FontProperties(fname=path)
         except Exception:
-                        continue
+            continue
     return fm.FontProperties()
 
 # --- ページ設定とカスタムCSS ---
@@ -245,15 +245,15 @@ def main():
         st.markdown('<div style="margin: 1.2rem 0;">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls"])
         st.markdown('</div>', unsafe_allow_html=True)
-    if uploaded_file:
+        if uploaded_file:
             try:
                 df = read_excel_with_auto_header(uploaded_file)
                 st.success(f"データ読み込み完了！{len(df)}件のデータを処理しました。")
                 with st.expander("検出された列名", expanded=False):
                     st.write(df.columns.tolist())
-                st.markdown('<h2 class="sub-title">支出データの可視化</h2>', unsafe_allow_html=True)
+                st.markdown('<h2 class="sub-title">📊 支出データの可視化</h2>', unsafe_allow_html=True)
                 date_col, amount_col = find_date_and_amount_columns(df)
-            if date_col and amount_col:
+                if date_col and amount_col:
                     df = df[[date_col, amount_col]].dropna()
                     df.columns = ['日付', '金額']
                     try:
@@ -272,7 +272,7 @@ def main():
                     st.markdown('<div style="display: flex; flex-direction: column; gap: 0.5rem;">', unsafe_allow_html=True)
                     # 月次支出の推移
                     try:
-            st.subheader("月次支出の推移")
+                        st.subheader("月次支出の推移")
                         fp = get_fontproperties()
                         fig1, ax1 = plt.subplots(figsize=(6, 2.5))
                         monthly = df.groupby(df['日付'].dt.strftime('%Y-%m'))['金額'].sum()
@@ -289,7 +289,7 @@ def main():
                         st.error(f"月次支出の推移グラフの描画でエラー: {e}")
                     # 日次支出の分布
                     try:
-            st.subheader("日次支出の分布")
+                        st.subheader("日次支出の分布")
                         fp = get_fontproperties()
                         fig2, ax2 = plt.subplots(figsize=(6, 2.5))
                         sns.histplot(df['金額'], bins=30, ax=ax2, color="#43A047")
@@ -305,12 +305,12 @@ def main():
                         st.error(f"日次支出の分布グラフの描画でエラー: {e}")
                     # 曜日別の平均支出
                     try:
-        st.subheader("曜日別の平均支出")
+                        st.subheader("曜日別の平均支出")
                         fp = get_fontproperties()
                         fig3, ax3 = plt.subplots(figsize=(6, 2.5))
                         df['曜日'] = df['日付'].dt.day_name()
                         weekday = df.groupby('曜日')['金額'].mean().reindex(
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
                         weekday.plot(kind='bar', ax=ax3, color="#FBC02D")
                         ax3.set_title('曜日別の平均支出', fontsize=13, fontproperties=fp)
                         ax3.set_xlabel('', fontproperties=fp)
@@ -324,7 +324,7 @@ def main():
                         st.error(f"曜日別の平均支出グラフの描画でエラー: {e}")
                     st.markdown('</div>', unsafe_allow_html=True)
                     # --- 基本統計量 ---
-        st.subheader("支出の基本統計量")
+                    st.subheader("支出の基本統計量")
                     st.dataframe(df['金額'].describe().to_frame())
                 else:
                     st.error("日付や金額の列が見つかりませんでした。Excelの列名を確認してください。")
@@ -353,7 +353,7 @@ def main():
             saving_goal = st.text_input("具体的な節約目標はありますか？（例：月額で¥10,000削減したいなど）", value=st.session_state.get('saving_goal', ''))
             lifestyle_improvements = st.text_input("現在の支出で、特に改善したい生活習慣はありますか？", value=st.session_state.get('lifestyle_improvements', ''))
             submitted = st.form_submit_button("アドバイスを表示")
-        if submitted:
+            if submitted:
                 st.session_state['advice_submitted'] = True
                 st.session_state['high_expense_purpose'] = high_expense_purpose
                 st.session_state['high_expense_necessity'] = high_expense_necessity
